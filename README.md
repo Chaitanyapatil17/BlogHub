@@ -42,18 +42,6 @@ BlogHub uses **Socket.io** for live bidirectional push notifications paired with
 
 ---
 
-## 🔑 Pre-Seeded Demo Accounts
-
-When the backend starts up, the database automatically initializes the schema and seeds the following test accounts:
-
-| Role | Email | Password |
-|---|---|---|
-| 👑 **Admin** | `admin@bloghub.com` | `admin123` |
-| ✅ **Verified User** | `verified@bloghub.com` | `user123` |
-| ⏳ **Unverified User** | `unverified@bloghub.com` | `user123` |
-
----
-
 ## 📊 Database Schema (PostgreSQL)
 
 - **`users`**: `id`, `name`, `email`, `password_hash`, `role`, `is_verified`, `created_at`
