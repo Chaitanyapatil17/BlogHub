@@ -21,7 +21,7 @@ export default function AdminNavbar() {
   };
 
   return (
-    <header className="h-16 bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-40 px-4 sm:px-6 flex items-center justify-between shadow-md w-full max-w-full overflow-x-clip">
+    <header className="h-16 bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-40 px-4 sm:px-6 flex items-center justify-between shadow-md w-full max-w-full overflow-x-clip shrink-0">
       {/* Left: Branding & Portal Badge */}
       <div className="flex items-center gap-3 sm:gap-6">
         <Link to="/" className="flex items-center gap-2 group">

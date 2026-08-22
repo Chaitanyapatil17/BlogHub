@@ -22,7 +22,7 @@ export default function UserNavbar() {
   };
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200/90 text-slate-900 sticky top-0 z-40 px-4 sm:px-6 flex items-center justify-between shadow-xs w-full max-w-full overflow-x-clip">
+    <header className="h-16 bg-white border-b border-slate-200/90 text-slate-900 sticky top-0 z-40 px-4 sm:px-6 flex items-center justify-between shadow-xs w-full max-w-full overflow-x-clip shrink-0">
       {/* Left: Branding & Creator Badge */}
       <div className="flex items-center gap-2 sm:gap-3">
         <Link to="/" className="flex items-center gap-2 group shrink-0">

@@ -102,7 +102,7 @@ function AppLayout() {
   const isCustomDashboard = isAdminPath || isDashboardPath;
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f7f7f5] text-slate-800 selection:bg-rose-500 selection:text-white font-sans antialiased w-full max-w-full overflow-x-hidden">
+    <div className={`min-h-screen flex flex-col text-slate-800 selection:bg-rose-500 selection:text-white font-sans antialiased w-full max-w-full ${isCustomDashboard ? 'bg-slate-50 overflow-hidden h-screen' : 'bg-[#f7f7f5] overflow-x-hidden'}`}>
       {/* Route-Specific Navbars */}
       {isAdminPath ? (
         <AdminNavbar />
@@ -116,7 +116,7 @@ function AppLayout() {
       )}
 
       {/* Main Content Area */}
-      <main className="flex-1 w-full max-w-full overflow-x-hidden">
+      <main className={`flex-1 w-full max-w-full ${isCustomDashboard ? 'overflow-hidden flex flex-col h-[calc(100vh-4rem)]' : 'overflow-x-hidden'}`}>
         <ErrorBoundary>
           <Routes>
             {/* Public Routes */}

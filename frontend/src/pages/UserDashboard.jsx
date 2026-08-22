@@ -356,38 +356,31 @@ export default function UserDashboard() {
     });
   };
 
-  const handleQuickAdminLogin = async () => {
-    try {
-      await login('admin@bloghub.com', 'admin123');
-      navigate('/admin');
-    } catch (err) {
-      navigate('/login?tab=admin');
-    }
-  };
-
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex flex-col md:flex-row bg-slate-50 relative w-full max-w-full overflow-x-hidden">
-      {/* FIXED PINNED SIDEBAR (DOES NOT SCROLL WITH PAGE & SUPPORTS MINIMIZE/MAXIMIZE) */}
+    <div className="flex-1 w-full h-full flex flex-col md:flex-row bg-slate-50 relative overflow-hidden">
+      {/* PINNED SIDEBAR (STARTS DIRECTLY UNDER NAVBAR WITH ZERO GAP) */}
       <aside
-        className={`bg-white border-r border-slate-200/90 flex flex-col shrink-0 md:sticky md:top-16 md:h-[calc(100vh-4rem)] z-30 transition-all duration-300 ease-in-out ${
+        className={`bg-white border-r border-slate-200/90 flex flex-col shrink-0 h-full overflow-y-auto transition-all duration-300 ease-in-out ${
           isCollapsed ? 'w-full md:w-20' : 'w-full md:w-64 lg:w-72'
         }`}
       >
         {/* Sidebar Header with Collapse/Expand Toggle */}
-        <div className={`p-4 border-b border-slate-200/80 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
+        <div className={`px-4 py-3.5 border-b border-slate-200/90 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} bg-slate-50/60`}>
           {!isCollapsed ? (
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-400 flex items-center justify-center font-bold text-white shadow-xs shrink-0">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-600 to-indigo-400 flex items-center justify-center font-bold text-white shadow-2xs shrink-0 text-xs">
                 {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
               </div>
               <div className="min-w-0 flex-1">
-                <h2 className="text-sm font-bold text-slate-900 truncate">{user?.name}</h2>
-                <p className="text-[11px] text-slate-500 truncate">{user?.email}</p>
+                <h2 className="text-xs font-bold text-slate-900 truncate leading-tight">{user?.name}</h2>
+                <span className="text-[10px] text-slate-500 font-medium truncate block">
+                  {isVerified ? 'Verified Creator' : 'Creator (Under Review)'}
+                </span>
               </div>
             </div>
           ) : (
             <div
-              className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-400 flex items-center justify-center font-bold text-white shadow-xs shrink-0"
+              className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-600 to-indigo-400 flex items-center justify-center font-bold text-white shadow-2xs shrink-0 text-xs"
               title={`${user?.name} (${user?.email})`}
             >
               {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
@@ -397,29 +390,12 @@ export default function UserDashboard() {
           {/* Desktop Minimize/Maximize Button */}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            className="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors cursor-pointer ml-1"
             title={isCollapsed ? 'Expand Sidebar' : 'Minimize Sidebar'}
           >
             {isCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
           </button>
         </div>
-
-        {/* Verification Status Banner */}
-        {!isCollapsed && (
-          <div className="px-4 py-2.5 bg-slate-50/70 border-b border-slate-100">
-            {isVerified ? (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span className="truncate">Verified Author</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-xs font-semibold">
-                <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                <span className="truncate">Unverified (Under Review)</span>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Sidebar Nav Items */}
         <nav className="p-3 space-y-1.5 flex-1 overflow-y-auto">
@@ -429,8 +405,8 @@ export default function UserDashboard() {
             </div>
           )}
 
-          {/* Admin Dashboard Option for Admins or Quick Switch */}
-          {isAdmin ? (
+          {/* Admin Dashboard Option for Verified Admins Only */}
+          {isAdmin && (
             <div className="pb-1">
               <Link
                 to="/admin"
@@ -443,21 +419,6 @@ export default function UserDashboard() {
                 </div>
                 {!isCollapsed && <ChevronRight className="w-3.5 h-3.5 text-white/80" />}
               </Link>
-            </div>
-          ) : (
-            <div className="pb-1">
-              <button
-                type="button"
-                onClick={handleQuickAdminLogin}
-                title="Switch to Administrator Dashboard"
-                className={`w-full flex items-center ${isCollapsed ? 'justify-center p-3' : 'justify-between px-3.5 py-2.5'} rounded-xl text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200/80 transition-colors cursor-pointer`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <Crown className="w-4 h-4 text-purple-600 shrink-0" />
-                  {!isCollapsed && <span>Admin Dashboard (Login)</span>}
-                </div>
-                {!isCollapsed && <ChevronRight className="w-3.5 h-3.5 text-purple-400" />}
-              </button>
             </div>
           )}
 
@@ -608,37 +569,38 @@ export default function UserDashboard() {
       </aside>
 
       {/* MAIN CONTENT AREA (INDEPENDENTLY SCROLLS SMOOTHLY) */}
-      <main className="flex-1 min-w-0 p-6 lg:p-8 overflow-y-auto">
+      <main className="flex-1 min-w-0 h-full p-4 sm:p-5 lg:p-6 overflow-y-auto">
         {/* Admin Access Denied Banner */}
         {searchParams.get('adminDenied') && (
-          <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-purple-900 shadow-xs animate-in fade-in-50">
-            <div className="flex items-start sm:items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-purple-600 flex items-center justify-center font-bold text-white shrink-0 shadow-xs">
-                <Crown className="w-5 h-5 text-amber-300" />
+          <div className="mb-4 p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between gap-3 text-rose-900 shadow-xs animate-in fade-in-50">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-rose-600 flex items-center justify-center font-bold text-white shrink-0 shadow-xs">
+                <AlertCircle className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs sm:text-sm font-bold text-purple-900">Administrator Access Restricted</h4>
-                <p className="text-[11px] sm:text-xs text-purple-700 mt-0.5">
-                  You are signed in as <strong>{user?.name}</strong> ({user?.email}) with standard <em>Creator</em> permissions.
+                <h4 className="text-xs sm:text-sm font-bold text-rose-900">Administrator Access Restricted</h4>
+                <p className="text-[11px] sm:text-xs text-rose-700 mt-0.5">
+                  You are signed in as <strong>{user?.name}</strong> with standard <em>Creator</em> permissions. Administrator privileges are required to view the Admin Dashboard.
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={handleQuickAdminLogin}
-                className="px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
-              >
-                <Crown className="w-3.5 h-3.5 text-amber-300" />
-                <span>Switch to Admin Account</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                searchParams.delete('adminDenied');
+                setSearchParams(searchParams);
+              }}
+              className="text-rose-400 hover:text-rose-600 text-xs font-bold px-2 py-1 cursor-pointer"
+            >
+              Dismiss
+            </button>
           </div>
         )}
 
         {/* Top Header info */}
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
               {activeTab === 'submit' && 'Multimedia Publishing Studio'}
               {activeTab === 'my-blogs' && 'My Blog Publications'}
               {activeTab === 'my-requests' && 'Submission History & Approvals'}
