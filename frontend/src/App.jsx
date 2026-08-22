@@ -7,6 +7,7 @@ import RunningNavbar from './components/RunningNavbar';
 import AdminNavbar from './components/AdminNavbar';
 import UserNavbar from './components/UserNavbar';
 import Footer from './components/Footer';
+import ScrollToTopButton from './components/ScrollToTopButton';
 import { ProtectedRoute, AdminRoute } from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -155,6 +156,9 @@ function AppLayout() {
 
       {/* Show Public Footer only on non-dashboard pages */}
       {!isCustomDashboard && <Footer />}
+
+      {/* Floating Scroll To Top Action */}
+      <ScrollToTopButton />
 
       {/* Real-time Toast Notifications */}
       <LiveToastBanner />
