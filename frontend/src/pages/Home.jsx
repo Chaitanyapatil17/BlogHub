@@ -2685,48 +2685,52 @@ export default function Home() {
     return `${minutes} min read`;
   };
 
-  // Wireframe Data Partitioning for Aaj Tak Layout:
+  // Wireframe Data Partitioning for Newsroom Layout:
   const isDefaultView = !queryParam && selectedCategory === 'All' && !tagParam;
-  const latestBlog = blogs.length > 0 ? blogs[0] : null;
+  const latestBlog = blogs.length > 0 ? blogs[0] : DEFAULT_WIRE_BLOGS[0];
+
+  // Helper to deduplicate blogs list
+  const dedupeBlogs = (list) =>
+    list.filter((b, idx, arr) => arr.findIndex((x) => (x.id === b.id || (x.slug && x.slug === b.slug))) === idx);
 
   // 2. Left Row of 4 Sub-leads in 2x2 Grid (underneath hero story)
-  const leftRelatedBlogs = blogs.length > 1
-    ? [
-        ...blogs.slice(1, 5),
-        ...DEFAULT_WIRE_BLOGS
-      ].slice(0, 4)
-    : DEFAULT_WIRE_BLOGS.slice(0, 4);
+  const leftRelatedBlogs = dedupeBlogs([
+    ...blogs.slice(1, 5),
+    ...DEFAULT_WIRE_BLOGS,
+  ]).slice(0, 4);
 
   // Left breaking bullet news items
-  const leftBreakingBullets = blogs.length > 5
-    ? blogs.slice(5, 8)
-    : DEFAULT_WIRE_BLOGS.slice(0, 3);
+  const leftBreakingBullets = dedupeBlogs([
+    ...blogs.slice(5, 8),
+    ...blogs.slice(1, 4),
+    ...DEFAULT_WIRE_BLOGS,
+  ]).slice(0, 3);
 
   // 3. Middle Column (1 Top Featured Wire + 10 Stacked Speedy News)
-  const middleRelatedBlog = blogs.length > 8 
-    ? blogs[8] 
-    : (blogs.length > 1 ? blogs[1] : DEFAULT_WIRE_BLOGS[0]);
+  const middleRelatedBlog = blogs.length > 5
+    ? blogs[5]
+    : blogs.length > 1
+    ? blogs[1]
+    : blogs.length > 0
+    ? blogs[0]
+    : DEFAULT_WIRE_BLOGS[0];
 
-  const middleOtherBlogs = blogs.length > 9
-    ? [
-        ...blogs.slice(9, 25),
-        ...DEFAULT_WIRE_BLOGS,
-        ...DEFAULT_WIRE_BLOGS
-      ].slice(0, 10)
-    : DEFAULT_WIRE_BLOGS.slice(0, 10);
+  const middleOtherBlogs = dedupeBlogs([
+    ...blogs.slice(1),
+    ...DEFAULT_WIRE_BLOGS,
+  ]).slice(0, 10);
 
   // 4. Right Column Top Tech Picks (4 items to match height)
-  const rightTechPicks = blogs.length > 15
-    ? [
-        ...blogs.slice(15, 20),
-        ...DEFAULT_WIRE_BLOGS
-      ].slice(0, 4)
-    : DEFAULT_WIRE_BLOGS.slice(0, 4);
+  const rightTechPicks = dedupeBlogs([
+    ...blogs.filter((b) => b.category && (b.category.toLowerCase().includes('tech') || b.category.toLowerCase().includes('ai'))),
+    ...blogs.slice(2),
+    ...DEFAULT_WIRE_BLOGS,
+  ]).slice(0, 4);
 
-  // 5. Remaining blogs for the feed below (dense 8 cards grid)
-  const feedBlogs = isDefaultView 
-    ? (blogs.length > 18 ? blogs.slice(18, 26) : blogs.slice(0, 8))
-    : blogs.slice(0, 8);
+  // 5. Remaining blogs for the feed below
+  const feedBlogs = isDefaultView
+    ? (blogs.length > 0 ? blogs : DEFAULT_WIRE_BLOGS)
+    : blogs;
 
   const displayedFeedBlogs = feedBlogs.slice(0, 8);
 
