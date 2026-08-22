@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { getBlogUrl } from '../utils/urlHelper';
+import ContentBlockRenderer, { stripHtml, getBlogCover } from '../components/ContentBlockRenderer';
 import { API_BASE_URL } from '../config';
 import { 
   Crown, 
@@ -36,7 +37,16 @@ import {
   Eye,
   MousePointerClick,
   Sparkles,
-  MapPin
+  MapPin,
+  Tag as TagIcon,
+  Calendar,
+  BookOpen,
+  X,
+  Filter,
+  UserCheck,
+  ShieldCheck,
+  Layers,
+  FileCheck
 } from 'lucide-react';
 import GeographicAnalyticsView from '../components/admin/GeographicAnalyticsView';
 
@@ -62,6 +72,9 @@ export default function AdminDashboard() {
   const [rejectModal, setRejectModal] = useState(null);
   const [reviewNote, setReviewNote] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [requestFilter, setRequestFilter] = useState('all'); // 'all' | 'pending' | 'approved' | 'rejected'
+  const [requestSearch, setRequestSearch] = useState('');
+  const [previewModalReq, setPreviewModalReq] = useState(null);
 
   // Blogs State
   const [blogs, setBlogs] = useState([]);
@@ -920,106 +933,356 @@ export default function AdminDashboard() {
         )}
 
         {/* TAB 1: Manage Requests */}
-        {activeTab === 'requests' && (
-          <div>
-            {loadingRequests ? (
-              <div className="py-12 text-center text-slate-500">Loading submission requests...</div>
-            ) : requests.length === 0 ? (
-              <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center max-w-md mx-auto shadow-xs">
-                <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
-                <h3 className="text-lg font-bold text-slate-800 mb-1">Queue is empty!</h3>
-                <p className="text-sm text-slate-500">There are no pending blog approval requests.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {requests.map((req) => (
-                  <div
-                    key={req.id}
-                    className={`bg-white border rounded-2xl p-6 shadow-xs transition-all ${
-                      req.status === 'pending'
-                        ? 'border-amber-300 ring-1 ring-amber-200'
-                        : 'border-slate-200'
+        {activeTab === 'requests' && (() => {
+          const pendingCount = requests.filter((r) => r.status === 'pending').length;
+          const approvedCount = requests.filter((r) => r.status === 'approved').length;
+          const rejectedCount = requests.filter((r) => r.status === 'rejected').length;
+
+          const filteredRequests = requests.filter((req) => {
+            if (requestFilter !== 'all' && req.status !== requestFilter) return false;
+            if (requestSearch.trim()) {
+              const q = requestSearch.toLowerCase().trim();
+              const matchTitle = (req.blog_title || '').toLowerCase().includes(q);
+              const matchUser = (req.user_name || '').toLowerCase().includes(q) || (req.user_email || '').toLowerCase().includes(q);
+              const matchCat = (req.blog_category || '').toLowerCase().includes(q) || (req.blog_sub_category || '').toLowerCase().includes(q);
+              const matchContent = (req.blog_content || '').toLowerCase().includes(q);
+              return matchTitle || matchUser || matchCat || matchContent;
+            }
+            return true;
+          });
+
+          return (
+            <div className="space-y-6">
+              {/* Queue Controls: Filter Tabs & Search Bar */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+                {/* Status Filter Pills */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+                  <button
+                    type="button"
+                    onClick={() => setRequestFilter('all')}
+                    className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                      requestFilter === 'all'
+                        ? 'bg-slate-900 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
                   >
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                      <div className="flex-1">
-                        {/* Status and metadata */}
-                        <div className="flex flex-wrap items-center gap-2 mb-2">
-                          {req.status === 'pending' && (
-                            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1">
-                              <Clock className="w-3 h-3 text-amber-600" />
-                              Pending Review
-                            </span>
-                          )}
-                          {req.status === 'approved' && (
-                            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                              <CheckCircle2 className="w-3 h-3" />
-                              Approved
-                            </span>
-                          )}
-                          {req.status === 'rejected' && (
-                            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1">
-                              <XCircle className="w-3 h-3" />
-                              Rejected
-                            </span>
-                          )}
+                    <span>All Submissions</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-bold ${
+                      requestFilter === 'all' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                    }`}>
+                      {requests.length}
+                    </span>
+                  </button>
 
-                          <span className="text-xs text-slate-600">
-                            Submitted by: <strong className="text-slate-800">{req.user_name}</strong> ({req.user_email})
-                          </span>
-                          <span className="text-xs text-slate-400">• {formatDate(req.created_at)}</span>
-                        </div>
+                  <button
+                    type="button"
+                    onClick={() => setRequestFilter('pending')}
+                    className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                      requestFilter === 'pending'
+                        ? 'bg-amber-600 text-white shadow-xs'
+                        : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200/60'
+                    }`}
+                  >
+                    <Clock className="w-3 h-3" />
+                    <span>Pending Review</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-bold ${
+                      requestFilter === 'pending' ? 'bg-white/20 text-white' : 'bg-amber-200/80 text-amber-900'
+                    }`}>
+                      {pendingCount}
+                    </span>
+                  </button>
 
-                        {/* Blog preview */}
-                        <h3 className="text-lg font-bold text-slate-900 mb-2">{req.blog_title}</h3>
-                        <p className="text-xs text-slate-700 line-clamp-3 bg-slate-50 p-3 rounded-xl font-mono mb-3 border border-slate-200">
-                          {req.blog_content}
-                        </p>
+                  <button
+                    type="button"
+                    onClick={() => setRequestFilter('approved')}
+                    className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                      requestFilter === 'approved'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/60'
+                    }`}
+                  >
+                    <CheckCircle2 className="w-3 h-3" />
+                    <span>Approved</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-bold ${
+                      requestFilter === 'approved' ? 'bg-white/20 text-white' : 'bg-emerald-200/80 text-emerald-900'
+                    }`}>
+                      {approvedCount}
+                    </span>
+                  </button>
 
-                        {/* Admin Note if already reviewed */}
-                        {req.review_note && (
-                          <div className="text-xs text-slate-600 flex items-center gap-1.5">
-                            <MessageSquare className="w-3.5 h-3.5 text-indigo-600" />
-                            <span>Review Note: <em>"{req.review_note}"</em></span>
-                          </div>
-                        )}
-                      </div>
+                  <button
+                    type="button"
+                    onClick={() => setRequestFilter('rejected')}
+                    className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                      requestFilter === 'rejected'
+                        ? 'bg-rose-600 text-white shadow-xs'
+                        : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/60'
+                    }`}
+                  >
+                    <XCircle className="w-3 h-3" />
+                    <span>Rejected</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-bold ${
+                      requestFilter === 'rejected' ? 'bg-white/20 text-white' : 'bg-rose-200/80 text-rose-900'
+                    }`}>
+                      {rejectedCount}
+                    </span>
+                  </button>
+                </div>
 
-                      {/* Actions */}
-                      <div className="flex flex-wrap items-center gap-2 shrink-0">
-                        {req.status === 'pending' ? (
-                          <>
-                            <button
-                              onClick={() => handleApprove(req.id)}
-                              disabled={actionLoading}
-                              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer"
-                            >
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                              Approve & Publish
-                            </button>
-                            <button
-                              onClick={() => {
-                                setRejectModal(req);
-                                setReviewNote('');
-                              }}
-                              disabled={actionLoading}
-                              className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer"
-                            >
-                              <XCircle className="w-3.5 h-3.5" />
-                              Reject...
-                            </button>
-                          </>
-                        ) : (
-                          <span className="text-xs text-slate-400 font-medium">Reviewed</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                {/* Search Bar */}
+                <div className="relative w-full md:w-72">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search title, author, category..."
+                    value={requestSearch}
+                    onChange={(e) => setRequestSearch(e.target.value)}
+                    className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs placeholder-slate-400 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
+                  />
+                  {requestSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setRequestSearch('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-        )}
+
+              {/* Requests List Area */}
+              {loadingRequests ? (
+                <div className="py-16 text-center text-slate-500 bg-white border border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-2 shadow-xs">
+                  <RefreshCw className="w-5 h-5 animate-spin text-indigo-600" />
+                  <span className="text-xs font-semibold">Loading submission queue...</span>
+                </div>
+              ) : filteredRequests.length === 0 ? (
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-12 text-center max-w-lg mx-auto shadow-xs">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-500 flex items-center justify-center mx-auto mb-3">
+                    <FileCheck className="w-6 h-6 text-slate-600" />
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900 mb-1">
+                    {requestSearch ? 'No matching submissions found' : 'No requests in this view'}
+                  </h3>
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                    {requestSearch
+                      ? `No articles match "${requestSearch}". Try searching for another keyword or author.`
+                      : 'There are currently no article requests matching this filter criteria.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {filteredRequests.map((req) => {
+                    const cleanText = stripHtml(req.blog_content || '');
+                    const wordCount = cleanText.split(/\s+/).filter(Boolean).length;
+                    const readTimeMins = Math.max(1, Math.ceil(wordCount / 180));
+                    const coverUrl = req.blog_cover_image || null;
+
+                    return (
+                      <div
+                        key={req.id}
+                        className={`bg-white border rounded-2xl p-5 sm:p-6 shadow-xs hover:shadow-sm transition-all duration-200 ${
+                          req.status === 'pending'
+                            ? 'border-amber-300 ring-2 ring-amber-100/80 bg-gradient-to-br from-white via-white to-amber-50/20'
+                            : req.status === 'approved'
+                            ? 'border-emerald-200/90'
+                            : 'border-slate-200 opacity-90'
+                        }`}
+                      >
+                        <div className="flex flex-col lg:flex-row gap-5 items-start justify-between">
+                          {/* Main Article Details */}
+                          <div className="flex-1 min-w-0 space-y-2.5">
+                            {/* Top Meta Bar */}
+                            <div className="flex flex-wrap items-center gap-2">
+                              {/* Status Badge */}
+                              {req.status === 'pending' && (
+                                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
+                                  <Clock className="w-3 h-3 text-amber-600 animate-pulse" />
+                                  Pending Review
+                                </span>
+                              )}
+                              {req.status === 'approved' && (
+                                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                  Approved & Published
+                                </span>
+                              )}
+                              {req.status === 'rejected' && (
+                                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
+                                  <XCircle className="w-3 h-3 text-rose-600" />
+                                  Rejected
+                                </span>
+                              )}
+
+                              {/* Category & Subcategory Pills */}
+                              {req.blog_category && (
+                                <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                  {req.blog_category}
+                                </span>
+                              )}
+                              {req.blog_sub_category && (
+                                <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                  {req.blog_sub_category}
+                                </span>
+                              )}
+
+                              {/* Word Count / Read Time */}
+                              <span className="text-[11px] text-slate-400">
+                                • {readTimeMins} min read ({wordCount} words)
+                              </span>
+                            </div>
+
+                            {/* Author & Timestamp */}
+                            <div className="flex items-center gap-2 text-xs text-slate-600">
+                              <div className="w-5 h-5 rounded-full bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0">
+                                {req.user_name ? req.user_name.charAt(0).toUpperCase() : 'U'}
+                              </div>
+                              <span className="font-semibold text-slate-900">{req.user_name}</span>
+                              <span className="text-slate-400">({req.user_email})</span>
+                              {req.user_is_verified && (
+                                <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
+                                  <ShieldCheck className="w-2.5 h-2.5" />
+                                  Verified
+                                </span>
+                              )}
+                              <span className="text-slate-300">•</span>
+                              <span className="text-slate-500">{formatDate(req.created_at)}</span>
+                            </div>
+
+                            {/* Blog Title */}
+                            <h3
+                              onClick={() => setPreviewModalReq(req)}
+                              className="text-base sm:text-lg font-bold text-slate-950 hover:text-indigo-600 transition-colors cursor-pointer leading-snug tracking-tight"
+                            >
+                              {req.blog_title}
+                            </h3>
+
+                            {/* Clean, Stripped Content Preview (NO HTML TAGS!) */}
+                            <div className="relative bg-slate-50/90 border border-slate-200/90 rounded-xl p-3.5 text-xs text-slate-700 leading-relaxed">
+                              <p className="line-clamp-3 font-sans">
+                                {cleanText || 'No text content available in this submission.'}
+                              </p>
+                            </div>
+
+                            {/* Tags preview if any */}
+                            {Array.isArray(req.blog_tags) && req.blog_tags.length > 0 && (
+                              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                                <TagIcon className="w-3 h-3 text-slate-400" />
+                                {req.blog_tags.slice(0, 5).map((t, idx) => (
+                                  <span key={idx} className="text-[10.5px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md font-medium">
+                                    #{t}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Review Note Callout if reviewed */}
+                            {req.review_note && (
+                              <div className={`p-3 rounded-xl text-xs flex items-start gap-2 border ${
+                                req.status === 'rejected'
+                                  ? 'bg-rose-50/80 border-rose-200 text-rose-800'
+                                  : 'bg-indigo-50/80 border-indigo-200 text-indigo-900'
+                              }`}>
+                                <MessageSquare className="w-3.5 h-3.5 shrink-0 mt-0.5 text-indigo-600" />
+                                <div>
+                                  <strong className="font-bold">
+                                    {req.reviewer_name ? `Review Note by ${req.reviewer_name}` : 'Admin Review Note'}:
+                                  </strong>{' '}
+                                  <span className="italic">"{req.review_note}"</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Cover Thumbnail Preview & Action Buttons Column */}
+                          <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end justify-between gap-3 shrink-0 w-full lg:w-48">
+                            {/* Optional Cover Image Thumbnail */}
+                            {coverUrl && (
+                              <div
+                                onClick={() => setPreviewModalReq(req)}
+                                className="w-full lg:w-44 aspect-[16/10] bg-slate-100 rounded-xl overflow-hidden border border-slate-200/90 shadow-2xs relative group cursor-pointer"
+                              >
+                                <img
+                                  src={coverUrl}
+                                  alt={req.blog_title}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                  onError={(e) => { e.target.style.display = 'none'; }}
+                                />
+                                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                  <span className="text-[10px] font-bold text-white bg-black/60 px-2 py-1 rounded-lg backdrop-blur-xs flex items-center gap-1">
+                                    <Eye className="w-3 h-3" />
+                                    Preview
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Action Buttons */}
+                            <div className="flex flex-col gap-2 w-full">
+                              <button
+                                type="button"
+                                onClick={() => setPreviewModalReq(req)}
+                                className="w-full px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                              >
+                                <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+                                <span>Preview Article</span>
+                              </button>
+
+                              {req.status === 'pending' ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleApprove(req.id)}
+                                    disabled={actionLoading}
+                                    className="w-full px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                  >
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                    <span>Approve & Publish</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setRejectModal(req);
+                                      setReviewNote('');
+                                    }}
+                                    disabled={actionLoading}
+                                    className="w-full px-3.5 py-2 bg-white hover:bg-rose-50 text-rose-700 border border-rose-300 text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                  >
+                                    <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                                    <span>Reject...</span>
+                                  </button>
+                                </>
+                              ) : req.status === 'approved' && req.blog_slug ? (
+                                <Link
+                                  to={getBlogUrl({
+                                    slug: req.blog_slug,
+                                    category: req.blog_category,
+                                    sub_category: req.blog_sub_category,
+                                  })}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="w-full px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>View Live Page</span>
+                                </Link>
+                              ) : (
+                                <span className="text-[11px] text-center text-slate-400 font-semibold py-1">
+                                  {req.status === 'rejected' ? 'Rejected with feedback' : 'Reviewed'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* TAB 2: Manage Blogs */}
         {activeTab === 'blogs' && (
@@ -1718,6 +1981,206 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* Full Article Review Preview Modal */}
+      {previewModalReq && (() => {
+        let parsedBlocks = [];
+        if (Array.isArray(previewModalReq.blog_blocks)) {
+          parsedBlocks = previewModalReq.blog_blocks;
+        } else if (typeof previewModalReq.blog_blocks === 'string') {
+          try {
+            parsedBlocks = JSON.parse(previewModalReq.blog_blocks);
+          } catch (e) {
+            parsedBlocks = [];
+          }
+        }
+
+        const cleanText = stripHtml(previewModalReq.blog_content || '');
+        const wordCount = cleanText.split(/\s+/).filter(Boolean).length;
+        const readTimeMins = Math.max(1, Math.ceil(wordCount / 180));
+        const coverUrl = previewModalReq.blog_cover_image || null;
+
+        return (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+            <div className="bg-white border border-slate-200 rounded-3xl max-w-3xl w-full my-auto shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
+              {/* Modal Top Header Bar */}
+              <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between gap-4 shrink-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {previewModalReq.status === 'pending' && (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-amber-600" />
+                      Pending Approval
+                    </span>
+                  )}
+                  {previewModalReq.status === 'approved' && (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                      Approved
+                    </span>
+                  )}
+                  {previewModalReq.status === 'rejected' && (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
+                      <XCircle className="w-3 h-3 text-rose-600" />
+                      Rejected
+                    </span>
+                  )}
+                  {previewModalReq.blog_category && (
+                    <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-slate-200/80 text-slate-800">
+                      {previewModalReq.blog_category}
+                    </span>
+                  )}
+                  {previewModalReq.blog_sub_category && (
+                    <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-indigo-100 text-indigo-800">
+                      {previewModalReq.blog_sub_category}
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setPreviewModalReq(null)}
+                  className="w-8 h-8 rounded-full bg-slate-200/80 hover:bg-slate-300 text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Scrollable Article Content */}
+              <div className="p-6 sm:p-8 overflow-y-auto space-y-6 flex-1">
+                {/* Title */}
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-950 font-serif leading-tight">
+                  {previewModalReq.blog_title}
+                </h1>
+
+                {/* Author Info Bar */}
+                <div className="flex items-center justify-between flex-wrap gap-3 pb-4 border-b border-slate-200 text-xs text-slate-600">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-full bg-indigo-600 text-white font-bold text-sm flex items-center justify-center shadow-xs">
+                      {previewModalReq.user_name ? previewModalReq.user_name.charAt(0).toUpperCase() : 'U'}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5 font-bold text-slate-900 text-sm">
+                        <span>{previewModalReq.user_name}</span>
+                        {previewModalReq.user_is_verified && (
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
+                            <ShieldCheck className="w-2.5 h-2.5" />
+                            Verified
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-slate-400 text-xs">{previewModalReq.user_email}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-slate-500 font-medium">
+                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                    <span>{formatDate(previewModalReq.created_at)}</span>
+                    <span>•</span>
+                    <span>{readTimeMins} min read ({wordCount} words)</span>
+                  </div>
+                </div>
+
+                {/* Cover Image if present */}
+                {coverUrl && (
+                  <div className="aspect-[16/9] w-full rounded-2xl overflow-hidden bg-slate-100 border border-slate-200/90 shadow-xs">
+                    <img
+                      src={coverUrl}
+                      alt={previewModalReq.blog_title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+
+                {/* Main Article Content */}
+                <div className="prose prose-slate max-w-none text-slate-800 font-sans text-sm sm:text-base leading-relaxed space-y-4">
+                  {parsedBlocks.length > 0 ? (
+                    <ContentBlockRenderer blocks={parsedBlocks} />
+                  ) : (
+                    cleanText.split(/\n\n+/).map((para, pIdx) => (
+                      <p key={pIdx} className="leading-relaxed">
+                        {para}
+                      </p>
+                    ))
+                  )}
+                </div>
+
+                {/* Tags */}
+                {Array.isArray(previewModalReq.blog_tags) && previewModalReq.blog_tags.length > 0 && (
+                  <div className="pt-4 border-t border-slate-200">
+                    <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tagged Keywords:</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {previewModalReq.blog_tags.map((t, idx) => (
+                        <span key={idx} className="text-xs px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg font-medium">
+                          #{t}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Actions Footer */}
+              <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setPreviewModalReq(null)}
+                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                >
+                  Close Preview
+                </button>
+
+                <div className="flex items-center gap-2">
+                  {previewModalReq.status === 'pending' ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const reqToReject = previewModalReq;
+                          setPreviewModalReq(null);
+                          setRejectModal(reqToReject);
+                          setReviewNote('');
+                        }}
+                        disabled={actionLoading}
+                        className="px-4 py-2 bg-white hover:bg-rose-50 text-rose-700 border border-rose-300 text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+                      >
+                        <XCircle className="w-3.5 h-3.5 inline mr-1 text-rose-600" />
+                        Reject with Feedback
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const reqId = previewModalReq.id;
+                          setPreviewModalReq(null);
+                          await handleApprove(reqId);
+                        }}
+                        disabled={actionLoading}
+                        className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 inline mr-1" />
+                        Approve & Publish Now
+                      </button>
+                    </>
+                  ) : previewModalReq.status === 'approved' && previewModalReq.blog_slug ? (
+                    <Link
+                      to={getBlogUrl({
+                        slug: previewModalReq.blog_slug,
+                        category: previewModalReq.blog_category,
+                        sub_category: previewModalReq.blog_sub_category,
+                      })}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5 shadow-xs"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      View Live Article
+                    </Link>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Reject Modal */}
       {rejectModal && (

@@ -19,6 +19,8 @@ router.get('/blog-requests', adminAuth, async (req, res) => {
     const result = await db.query(`
       SELECT br.id, br.status, br.review_note, br.created_at, br.updated_at,
              b.id as blog_id, b.title as blog_title, b.slug as blog_slug, b.content as blog_content, b.status as blog_status,
+             b.cover_image as blog_cover_image, b.category as blog_category, b.sub_category as blog_sub_category,
+             b.tags as blog_tags, b.blocks as blog_blocks,
              u.id as user_id, u.name as user_name, u.email as user_email, u.is_verified as user_is_verified,
              reviewer.name as reviewer_name
       FROM blog_requests br

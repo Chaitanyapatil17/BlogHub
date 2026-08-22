@@ -102,8 +102,21 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start Server and Initialize Database
-server.listen(PORT, async () => {
-  console.log(`🚀 BlogHub Backend with Socket.io running on http://localhost:${PORT}`);
-  await initDb();
-});
+// Start Server after DB initialization
+const startServer = async () => {
+  try {
+    await initDb();
+    server.listen(PORT, () => {
+      console.log(`=================================`);
+      console.log(`  BlogHub Server is Running!     `);
+      console.log(`  Port: ${PORT}                  `);
+      console.log(`  Socket.io: Active              `);
+      console.log(`=================================`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+startServer();
