@@ -9,6 +9,7 @@ const {
   broadcastBlogDeleted 
 } = require('../socket');
 const { clearSitemapCache } = require('./sitemap');
+const telegramService = require('../services/telegramService');
 
 // Utility to create URL-friendly slug supporting international titles
 function generateSlug(title, category = '') {
@@ -46,7 +47,7 @@ router.get('/', async (req, res) => {
 
     let query = `
       SELECT b.id, b.title, b.slug, b.content, b.cover_image, b.category, b.sub_category, b.tags, b.blocks, b.views,
-             b.status, b.created_at, b.updated_at,
+             b.status, b.is_ai_generated, b.ai_metadata, b.created_at, b.updated_at,
              u.id as author_id, u.name as author_name, u.email as author_email, u.is_verified as author_is_verified,
              (SELECT COUNT(*) FROM blog_likes WHERE blog_id = b.id) as like_count,
              (SELECT COUNT(*) FROM comments WHERE blog_id = b.id) as comment_count
@@ -95,7 +96,7 @@ router.get('/trending', async (req, res) => {
   try {
     const result = await db.query(`
       SELECT b.id, b.title, b.slug, b.content, b.cover_image, b.category, b.sub_category, b.tags, b.views,
-             b.status, b.created_at,
+             b.status, b.is_ai_generated, b.ai_metadata, b.created_at,
              u.name as author_name, u.is_verified as author_is_verified,
              (SELECT COUNT(*) FROM blog_likes WHERE blog_id = b.id) as like_count,
              (SELECT COUNT(*) FROM comments WHERE blog_id = b.id) as comment_count,
@@ -191,7 +192,7 @@ router.get('/:slug', async (req, res) => {
 
     const result = await db.query(
       `SELECT b.id, b.title, b.slug, b.content, b.cover_image, b.category, b.sub_category, b.tags, b.blocks, b.views,
-              b.status, b.created_at, b.updated_at,
+              b.status, b.is_ai_generated, b.ai_metadata, b.created_at, b.updated_at,
               u.id as author_id, u.name as author_name, u.email as author_email, u.is_verified as author_is_verified,
               (SELECT COUNT(*) FROM blog_likes WHERE blog_id = b.id) as like_count,
               (SELECT COUNT(*) FROM comments WHERE blog_id = b.id) as comment_count
@@ -301,6 +302,11 @@ router.post('/', authenticateToken, async (req, res) => {
       // Auto-published: broadcast to everyone in real time and clear sitemap cache!
       clearSitemapCache();
       broadcastBlogPublished(newBlog);
+
+      // Send Telegram Notification to Subscribed Users (Non-blocking)
+      telegramService.notifySubscribersForBlog(newBlog).catch((err) => {
+        console.warn('⚠️ [BlogCreation] Telegram notification broadcast error:', err.message);
+      });
     }
 
     res.status(201).json({

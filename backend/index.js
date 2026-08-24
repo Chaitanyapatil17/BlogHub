@@ -17,6 +17,14 @@ const advertisementRoutes = require('./routes/advertisements');
 const reelsRoutes = require('./routes/reels');
 const { router: sitemapRoutes } = require('./routes/sitemap');
 const analyticsRoutes = require('./routes/analytics');
+const telegramRoutes = require('./routes/telegram');
+const telegramService = require('./services/telegramService');
+
+// In-development modules (safely loaded if present)
+let aiBlogsRoutes = null;
+try { aiBlogsRoutes = require('./routes/aiBlogs'); } catch (e) {}
+let scheduler = null;
+try { scheduler = require('./services/scheduler'); } catch (e) {}
 
 const app = express();
 const server = http.createServer(app);
@@ -62,6 +70,10 @@ app.use('/api/admin/analytics', analyticsRoutes);
 app.use('/api', socialRoutes);
 app.use('/api', adminRoutes);
 app.use('/api/notifications', notificationRoutes);
+if (aiBlogsRoutes) {
+  app.use('/api/ai-generator', aiBlogsRoutes);
+}
+app.use('/api/telegram', telegramRoutes);
 
 // Database Connection Test Route
 app.get('/api/test-db', async (req, res) => {
@@ -106,11 +118,19 @@ app.use((err, req, res, next) => {
 const startServer = async () => {
   try {
     await initDb();
+    if (scheduler && typeof scheduler.initScheduler === 'function') {
+      scheduler.initScheduler();
+    }
+    if (telegramService && typeof telegramService.startPolling === 'function') {
+      telegramService.startPolling();
+    }
     server.listen(PORT, () => {
       console.log(`=================================`);
       console.log(`  BlogHub Server is Running!     `);
       console.log(`  Port: ${PORT}                  `);
       console.log(`  Socket.io: Active              `);
+      console.log(`  Telegram: Active (@BlogHubNewsBot) `);
+      console.log(`  AI Cron: 11:00 AM IST Daily    `);
       console.log(`=================================`);
     });
   } catch (error) {

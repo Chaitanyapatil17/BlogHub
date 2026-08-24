@@ -122,6 +122,44 @@ CREATE TABLE IF NOT EXISTS geo_analytics_events (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 10. AI Generation Logs Table (Tracks daily cron and manual executions)
+CREATE TABLE IF NOT EXISTS ai_generation_logs (
+    id SERIAL PRIMARY KEY,
+    trigger_type VARCHAR(50) DEFAULT 'cron', -- 'cron', 'manual'
+    status VARCHAR(50) DEFAULT 'success',    -- 'success', 'failed', 'running'
+    topics_discovered JSONB DEFAULT '[]',
+    blogs_generated INTEGER DEFAULT 0,
+    model_used VARCHAR(100) DEFAULT 'gemini-1.5-flash',
+    details JSONB DEFAULT '{}',
+    error_message TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 11. Telegram Subscribers Table
+CREATE TABLE IF NOT EXISTS telegram_subscribers (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    chat_id VARCHAR(100) UNIQUE NOT NULL,
+    username VARCHAR(100),
+    first_name VARCHAR(100),
+    categories TEXT[] DEFAULT '{"All"}',
+    is_active BOOLEAN DEFAULT true,
+    auth_token VARCHAR(100),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 12. Telegram Notification Logs Table
+CREATE TABLE IF NOT EXISTS telegram_notification_logs (
+    id SERIAL PRIMARY KEY,
+    blog_id INTEGER REFERENCES blogs(id) ON DELETE SET NULL,
+    category VARCHAR(100),
+    recipients_count INTEGER DEFAULT 0,
+    status VARCHAR(50) DEFAULT 'sent',
+    details JSONB DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_blogs_slug ON blogs(slug);
 CREATE INDEX IF NOT EXISTS idx_blogs_status ON blogs(status);
@@ -141,4 +179,9 @@ CREATE INDEX IF NOT EXISTS idx_geo_analytics_created ON geo_analytics_events(cre
 CREATE INDEX IF NOT EXISTS idx_geo_analytics_country ON geo_analytics_events(country_code, created_at);
 CREATE INDEX IF NOT EXISTS idx_geo_analytics_blog_event ON geo_analytics_events(blog_id, event_type);
 CREATE INDEX IF NOT EXISTS idx_geo_analytics_session ON geo_analytics_events(session_id);
+CREATE INDEX IF NOT EXISTS idx_telegram_subscribers_chat_id ON telegram_subscribers(chat_id);
+CREATE INDEX IF NOT EXISTS idx_telegram_subscribers_user_id ON telegram_subscribers(user_id);
+CREATE INDEX IF NOT EXISTS idx_telegram_subscribers_active ON telegram_subscribers(is_active);
+CREATE INDEX IF NOT EXISTS idx_telegram_logs_created ON telegram_notification_logs(created_at);
+
 

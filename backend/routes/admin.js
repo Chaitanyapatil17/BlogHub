@@ -9,6 +9,7 @@ const {
   broadcastBlogDeleted 
 } = require('../socket');
 const { clearSitemapCache } = require('./sitemap');
+const telegramService = require('../services/telegramService');
 
 // Helper middleware array for admin routes
 const adminAuth = [authenticateToken, requireAdmin];
@@ -20,7 +21,7 @@ router.get('/blog-requests', adminAuth, async (req, res) => {
       SELECT br.id, br.status, br.review_note, br.created_at, br.updated_at,
              b.id as blog_id, b.title as blog_title, b.slug as blog_slug, b.content as blog_content, b.status as blog_status,
              b.cover_image as blog_cover_image, b.category as blog_category, b.sub_category as blog_sub_category,
-             b.tags as blog_tags, b.blocks as blog_blocks,
+             b.tags as blog_tags, b.blocks as blog_blocks, b.is_ai_generated as blog_is_ai_generated, b.ai_metadata as blog_ai_metadata,
              u.id as user_id, u.name as user_name, u.email as user_email, u.is_verified as user_is_verified,
              reviewer.name as reviewer_name
       FROM blog_requests br
@@ -92,6 +93,11 @@ router.put('/blog-requests/:id/approve', adminAuth, async (req, res) => {
     clearSitemapCache();
     broadcastBlogPublished(publishedBlog);
     broadcastBlogRequestsUpdated({ id, status: 'approved', blog_id: blogReq.blog_id });
+
+    // Send Telegram Notification to Subscribed Users (Non-blocking)
+    telegramService.notifySubscribersForBlog(publishedBlog).catch((err) => {
+      console.warn('⚠️ [AdminApproval] Telegram notification broadcast error:', err.message);
+    });
 
     res.json({
       success: true,

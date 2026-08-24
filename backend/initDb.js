@@ -19,6 +19,8 @@ async function initDb() {
         ALTER TABLE users ADD COLUMN IF NOT EXISTS github_url VARCHAR(255);
         ALTER TABLE users ADD COLUMN IF NOT EXISTS twitter_url VARCHAR(255);
         ALTER TABLE users ADD COLUMN IF NOT EXISTS website_url VARCHAR(255);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_auth_token VARCHAR(64);
+        CREATE INDEX IF NOT EXISTS idx_users_telegram_auth ON users(telegram_auth_token);
 
         ALTER TABLE blogs ADD COLUMN IF NOT EXISTS cover_image TEXT;
         ALTER TABLE blogs ALTER COLUMN cover_image TYPE TEXT;
@@ -26,8 +28,52 @@ async function initDb() {
         ALTER TABLE blogs ADD COLUMN IF NOT EXISTS sub_category VARCHAR(100);
         ALTER TABLE blogs ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';
         ALTER TABLE blogs ADD COLUMN IF NOT EXISTS blocks JSONB DEFAULT '[]';
-        ALTER TABLE blogs ADD COLUMN IF NOT EXISTS views INTEGER DEFAULT 0;
+        ALTER TABLE blogs ADD COLUMN IF NOT EXISTS is_ai_generated BOOLEAN DEFAULT false;
+        ALTER TABLE blogs ADD COLUMN IF NOT EXISTS ai_metadata JSONB DEFAULT NULL;
         CREATE INDEX IF NOT EXISTS idx_blogs_sub_category ON blogs(sub_category);
+        CREATE INDEX IF NOT EXISTS idx_blogs_ai_generated ON blogs(is_ai_generated);
+
+        CREATE TABLE IF NOT EXISTS ai_generation_logs (
+            id SERIAL PRIMARY KEY,
+            trigger_type VARCHAR(50) DEFAULT 'cron',
+            status VARCHAR(50) DEFAULT 'success',
+            topics_discovered JSONB DEFAULT '[]',
+            blogs_generated INTEGER DEFAULT 0,
+            model_used VARCHAR(100) DEFAULT 'gemini-1.5-flash',
+            details JSONB DEFAULT '{}',
+            error_message TEXT,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_ai_logs_created ON ai_generation_logs(created_at);
+
+        -- Telegram Notification System Tables
+        CREATE TABLE IF NOT EXISTS telegram_subscribers (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            chat_id VARCHAR(100) UNIQUE NOT NULL,
+            username VARCHAR(100),
+            first_name VARCHAR(100),
+            categories TEXT[] DEFAULT '{"All"}',
+            is_active BOOLEAN DEFAULT true,
+            auth_token VARCHAR(64),
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_tg_subscribers_user ON telegram_subscribers(user_id);
+        CREATE INDEX IF NOT EXISTS idx_tg_subscribers_chat ON telegram_subscribers(chat_id);
+        CREATE INDEX IF NOT EXISTS idx_tg_subscribers_auth ON telegram_subscribers(auth_token);
+
+        CREATE TABLE IF NOT EXISTS telegram_notification_logs (
+            id SERIAL PRIMARY KEY,
+            blog_id INTEGER REFERENCES blogs(id) ON DELETE SET NULL,
+            category VARCHAR(100),
+            recipients_count INTEGER DEFAULT 0,
+            status VARCHAR(50) DEFAULT 'sent',
+            error_message TEXT,
+            details JSONB DEFAULT '{}',
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_tg_logs_created ON telegram_notification_logs(created_at);
       `);
     } catch (e) {
       console.warn('Migration note:', e.message);

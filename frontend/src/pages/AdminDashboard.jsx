@@ -46,9 +46,12 @@ import {
   UserCheck,
   ShieldCheck,
   Layers,
-  FileCheck
+  FileCheck,
+  Bot
 } from 'lucide-react';
 import GeographicAnalyticsView from '../components/admin/GeographicAnalyticsView';
+import AIBlogStudioView from '../components/admin/AIBlogStudioView';
+import TelegramAdminWidget from '../components/admin/TelegramAdminWidget';
 
 export default function AdminDashboard() {
   const { token, user: currentAdmin, logout } = useAuth();
@@ -567,42 +570,40 @@ export default function AdminDashboard() {
   );
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex flex-col md:flex-row bg-slate-50 relative w-full max-w-full overflow-x-hidden">
-      {/* FIXED PINNED ADMIN SIDEBAR (DOES NOT SCROLL AWAY WITH PAGE & SUPPORTS MINIMIZE/MAXIMIZE) */}
+    <div className="flex-1 w-full h-full flex flex-col md:flex-row bg-slate-50 relative overflow-hidden">
+      {/* PINNED ADMIN SIDEBAR (DESKTOP) */}
       <aside
-        className={`bg-white border-r border-slate-200/90 flex flex-col shrink-0 md:sticky md:top-16 md:h-[calc(100vh-4rem)] z-30 transition-all duration-300 ease-in-out ${
-          isCollapsed ? 'w-full md:w-20' : 'w-full md:w-64 lg:w-72'
+        className={`hidden md:flex md:flex-col bg-white border-r border-slate-200/90 shrink-0 h-full overflow-y-auto transition-all duration-300 ease-in-out ${
+          isCollapsed ? 'md:w-20' : 'md:w-64 lg:w-72'
         }`}
       >
         {/* Admin Branding in Sidebar with Minimize/Maximize Button */}
-        <div className={`p-4 border-b border-slate-200/80 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
+        <div className={`px-4 py-3.5 border-b border-slate-200/90 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} bg-slate-50/60`}>
           {!isCollapsed ? (
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-purple-600 flex items-center justify-center font-bold text-white shadow-xs shrink-0">
-                <Crown className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center font-bold text-white shadow-2xs shrink-0 text-xs">
+                <Crown className="w-4 h-4 text-white" />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1">
-                  <span className="text-[10px] font-bold text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.2 rounded-full">
-                    Admin Portal
-                  </span>
-                </div>
-                <h2 className="text-xs font-bold text-slate-900 truncate mt-0.5">{currentAdmin?.name}</h2>
+                <h2 className="text-xs font-bold text-slate-900 truncate leading-tight">{currentAdmin?.name || 'Administrator'}</h2>
+                <span className="text-[10px] text-purple-700 font-semibold truncate block">
+                  Super Admin Portal
+                </span>
               </div>
             </div>
           ) : (
             <div
-              className="w-10 h-10 rounded-xl bg-purple-600 flex items-center justify-center font-bold text-white shadow-xs shrink-0"
+              className="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center font-bold text-white shadow-2xs shrink-0 text-xs"
               title={`Admin Portal: ${currentAdmin?.name}`}
             >
-              <Crown className="w-5 h-5 text-white" />
+              <Crown className="w-4 h-4 text-white" />
             </div>
           )}
 
           {/* Desktop Minimize/Maximize Button */}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            className="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors cursor-pointer ml-1"
             title={isCollapsed ? 'Expand Sidebar' : 'Minimize Sidebar'}
           >
             {isCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
@@ -651,6 +652,28 @@ export default function AdminDashboard() {
             ) : (
               <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/10 text-emerald-700 border border-emerald-500/20">
                 LIVE
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab('ai_studio')}
+            title="AI Blog Studio & Daily Trends"
+            className={`w-full flex items-center ${isCollapsed ? 'justify-center p-3 relative' : 'justify-between px-3.5 py-2.5'} rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'ai_studio'
+                ? 'bg-gradient-to-r from-purple-500/15 to-indigo-500/15 text-purple-700 border border-purple-200 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <Sparkles className="w-4 h-4 text-purple-600 shrink-0" />
+              {!isCollapsed && <span>AI Blog Studio</span>}
+            </div>
+            {isCollapsed ? (
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-purple-600 animate-pulse"></span>
+            ) : (
+              <span className="px-1.5 py-0.2 rounded-md text-[9px] font-black uppercase tracking-wider bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-2xs">
+                AI
               </span>
             )}
           </button>
@@ -789,14 +812,109 @@ export default function AdminDashboard() {
         </div>
       </aside>
 
+      {/* MOBILE HORIZONTAL ADMIN NAVIGATION STRIP (< md) */}
+      <div className="md:hidden bg-slate-900 border-b border-slate-800 px-3 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar scrollbar-none shrink-0 shadow-md z-10 select-none text-white">
+        <button
+          type="button"
+          onClick={() => setActiveTab('overview')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
+            activeTab === 'overview'
+              ? 'bg-purple-600 text-white shadow-xs'
+              : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+          }`}
+        >
+          <LayoutDashboard className="w-3.5 h-3.5" />
+          <span>Overview</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('geo_analytics')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
+            activeTab === 'geo_analytics'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+          }`}
+        >
+          <Globe className="w-3.5 h-3.5" />
+          <span>Geo Analytics</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('ai_studio')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
+            activeTab === 'ai_studio'
+              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-xs'
+              : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>AI Studio</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('requests')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
+            activeTab === 'requests'
+              ? 'bg-amber-600 text-white shadow-xs'
+              : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+          }`}
+        >
+          <Clock className="w-3.5 h-3.5" />
+          <span>Queue ({stats.pendingRequests})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('blogs')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
+            activeTab === 'blogs'
+              ? 'bg-purple-600 text-white shadow-xs'
+              : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+          }`}
+        >
+          <FileText className="w-3.5 h-3.5" />
+          <span>Blogs ({blogs.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('users')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
+            activeTab === 'users'
+              ? 'bg-purple-600 text-white shadow-xs'
+              : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+          }`}
+        >
+          <Users className="w-3.5 h-3.5" />
+          <span>Users ({users.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('ads')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
+            activeTab === 'ads'
+              ? 'bg-pink-600 text-white shadow-xs'
+              : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+          }`}
+        >
+          <Megaphone className="w-3.5 h-3.5" />
+          <span>Ads ({ads.length})</span>
+        </button>
+      </div>
+
       {/* MAIN CONTENT AREA (INDEPENDENTLY SCROLLS SMOOTHLY) */}
-      <main className="flex-1 min-w-0 p-6 lg:p-8 overflow-y-auto">
+      <main className="flex-1 min-w-0 h-full p-3.5 sm:p-6 lg:p-8 overflow-y-auto">
         {/* Top bar info */}
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">
               {activeTab === 'overview' && 'System Overview & Metrics'}
               {activeTab === 'geo_analytics' && 'Geographic Engagement & Telemetry'}
+              {activeTab === 'ai_studio' && 'AI Blog Generator & Trend Studio'}
               {activeTab === 'requests' && 'Blog Approval Queue'}
               {activeTab === 'blogs' && 'All Published & Draft Blogs'}
               {activeTab === 'users' && 'User Accounts & Verification Directory'}
@@ -805,7 +923,8 @@ export default function AdminDashboard() {
             <p className="text-xs text-slate-500 mt-0.5">
               {activeTab === 'overview' && 'Real-time database performance, engagement counters, and submission queues.'}
               {activeTab === 'geo_analytics' && 'Worldwide reader distribution, interactive map, country rankings, and reading depth.'}
-              {activeTab === 'requests' && 'Review unverified author submissions and approve or reject with feedback.'}
+              {activeTab === 'ai_studio' && 'Daily 11:00 AM IST trend discovery, Google Gemini synthesis, local artwork mapping, and review queue.'}
+              {activeTab === 'requests' && 'Review unverified and AI-assisted author submissions and approve or reject with feedback.'}
               {activeTab === 'blogs' && 'Read, inspect, or delete any article on the platform.'}
               {activeTab === 'users' && 'Manage registered authors, grant 1-click verification, or remove accounts.'}
               {activeTab === 'ads' && 'Manage high-visibility promotional banners on the explore discovery page.'}
@@ -824,6 +943,14 @@ export default function AdminDashboard() {
         {/* TAB: Geographic Analytics */}
         {activeTab === 'geo_analytics' && (
           <GeographicAnalyticsView token={token} />
+        )}
+
+        {/* TAB: AI Blog Generator Studio */}
+        {activeTab === 'ai_studio' && (
+          <AIBlogStudioView 
+            token={token} 
+            onNavigateToRequests={() => setActiveTab('requests')} 
+          />
         )}
 
         {/* TAB 0: Overview & Stats */}
@@ -929,6 +1056,9 @@ export default function AdminDashboard() {
                 </div>
               )}
             </div>
+
+            {/* Telegram Notification Dispatcher & Channel Statistics */}
+            <TelegramAdminWidget token={token} />
           </div>
         )}
 
@@ -1079,6 +1209,15 @@ export default function AdminDashboard() {
                     const readTimeMins = Math.max(1, Math.ceil(wordCount / 180));
                     const coverUrl = req.blog_cover_image || null;
 
+                    let aiMeta = null;
+                    if (req.blog_ai_metadata) {
+                      aiMeta = typeof req.blog_ai_metadata === 'string' ? JSON.parse(req.blog_ai_metadata || '{}') : req.blog_ai_metadata;
+                    } else if (req.ai_metadata) {
+                      aiMeta = typeof req.ai_metadata === 'string' ? JSON.parse(req.ai_metadata || '{}') : req.ai_metadata;
+                    }
+
+                    const isAiAssisted = req.blog_is_ai_generated || req.is_ai_generated || !!aiMeta;
+
                     return (
                       <div
                         key={req.id}
@@ -1115,6 +1254,14 @@ export default function AdminDashboard() {
                                 </span>
                               )}
 
+                              {/* AI Assisted Badge */}
+                              {isAiAssisted && (
+                                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-2xs flex items-center gap-1">
+                                  <Sparkles className="w-3 h-3 text-amber-300" />
+                                  <span>✦ AI-Assisted</span>
+                                </span>
+                              )}
+
                               {/* Category & Subcategory Pills */}
                               {req.blog_category && (
                                 <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
@@ -1135,10 +1282,10 @@ export default function AdminDashboard() {
 
                             {/* Author & Timestamp */}
                             <div className="flex items-center gap-2 text-xs text-slate-600">
-                              <div className="w-5 h-5 rounded-full bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0">
-                                {req.user_name ? req.user_name.charAt(0).toUpperCase() : 'U'}
+                              <div className={`w-5 h-5 rounded-full ${isAiAssisted ? 'bg-gradient-to-br from-purple-600 to-indigo-600' : 'bg-indigo-600'} text-white font-bold text-[10px] flex items-center justify-center shrink-0`}>
+                                {isAiAssisted ? '🤖' : (req.user_name ? req.user_name.charAt(0).toUpperCase() : 'U')}
                               </div>
-                              <span className="font-semibold text-slate-900">{req.user_name}</span>
+                              <span className="font-semibold text-slate-900">{isAiAssisted ? `${req.user_name || 'BlogHub AI'} (AI Generator)` : req.user_name}</span>
                               <span className="text-slate-400">({req.user_email})</span>
                               {req.user_is_verified && (
                                 <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
@@ -1157,6 +1304,31 @@ export default function AdminDashboard() {
                             >
                               {req.blog_title}
                             </h3>
+
+                            {/* AI Summary / Takeaways Box if available */}
+                            {aiMeta && (aiMeta.summary || (aiMeta.key_takeaways && aiMeta.key_takeaways.length > 0)) && (
+                              <div className="bg-gradient-to-r from-purple-50/90 via-indigo-50/80 to-purple-50/60 border border-purple-200/80 rounded-xl p-3.5 space-y-2 text-xs text-purple-950">
+                                {aiMeta.summary && (
+                                  <p className="text-slate-800 leading-relaxed">
+                                    <strong className="text-purple-900 font-bold">✦ AI Executive Summary: </strong>
+                                    {aiMeta.summary}
+                                  </p>
+                                )}
+                                {aiMeta.key_takeaways && aiMeta.key_takeaways.length > 0 && (
+                                  <div className="pt-1 space-y-1">
+                                    <div className="text-[10.5px] font-bold text-purple-900 uppercase tracking-wider">Key Takeaways:</div>
+                                    <div className="grid grid-cols-1 gap-1">
+                                      {aiMeta.key_takeaways.slice(0, 3).map((takeaway, tIdx) => (
+                                        <div key={tIdx} className="flex items-start gap-1.5 text-[11.5px] text-slate-700">
+                                          <span className="text-purple-600 font-black">✓</span>
+                                          <span>{takeaway}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
 
                             {/* Clean, Stripped Content Preview (NO HTML TAGS!) */}
                             <div className="relative bg-slate-50/90 border border-slate-200/90 rounded-xl p-3.5 text-xs text-slate-700 leading-relaxed">
@@ -2090,6 +2262,70 @@ export default function AdminDashboard() {
                     />
                   </div>
                 )}
+
+                {/* AI Brief Box if AI-Assisted */}
+                {(() => {
+                  let aiMeta = null;
+                  if (previewModalReq.blog_ai_metadata) {
+                    aiMeta = typeof previewModalReq.blog_ai_metadata === 'string' ? JSON.parse(previewModalReq.blog_ai_metadata || '{}') : previewModalReq.blog_ai_metadata;
+                  } else if (previewModalReq.ai_metadata) {
+                    aiMeta = typeof previewModalReq.ai_metadata === 'string' ? JSON.parse(previewModalReq.ai_metadata || '{}') : previewModalReq.ai_metadata;
+                  }
+
+                  if (!aiMeta && !previewModalReq.blog_is_ai_generated && !previewModalReq.is_ai_generated) return null;
+
+                  return (
+                    <div className="bg-gradient-to-br from-purple-50 via-indigo-50/70 to-slate-50 border border-purple-200/90 rounded-2xl p-5 space-y-3.5 shadow-xs">
+                      <div className="flex items-center justify-between pb-2 border-b border-purple-200/60">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white flex items-center justify-center shadow-xs">
+                            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-black text-purple-950 uppercase tracking-wider">
+                              ✦ AI-Assisted Article Brief
+                            </h4>
+                            <div className="text-[10px] text-purple-700 font-medium">
+                              Engine: {aiMeta?.model_used || 'Google Gemini AI'} • Discovered from real-time news telemetry
+                            </div>
+                          </div>
+                        </div>
+
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-300">
+                          Verified AI Output
+                        </span>
+                      </div>
+
+                      {aiMeta?.summary && (
+                        <p className="text-xs text-slate-800 leading-relaxed font-sans">
+                          <strong className="text-purple-950 font-bold">Executive Summary: </strong>
+                          {aiMeta.summary}
+                        </p>
+                      )}
+
+                      {aiMeta?.key_takeaways && aiMeta.key_takeaways.length > 0 && (
+                        <div className="space-y-1.5 pt-1">
+                          <div className="text-[10.5px] font-bold text-purple-950 uppercase tracking-wider">Key Takeaways:</div>
+                          <div className="grid grid-cols-1 gap-1.5">
+                            {aiMeta.key_takeaways.map((takeaway, idx) => (
+                              <div key={idx} className="flex items-start gap-2 text-xs text-slate-800 bg-white/80 p-2.5 rounded-xl border border-purple-100">
+                                <span className="text-purple-600 font-black">✓</span>
+                                <span>{takeaway}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {aiMeta?.why_it_matters && (
+                        <div className="text-xs text-indigo-950 bg-white/90 p-2.5 rounded-xl border border-indigo-200 flex items-start gap-2">
+                          <span className="font-bold text-indigo-700 shrink-0">💡 Why It Matters:</span>
+                          <span>{aiMeta.why_it_matters}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Main Article Content */}
                 <div className="prose prose-slate max-w-none text-slate-800 font-sans text-sm sm:text-base leading-relaxed space-y-4">

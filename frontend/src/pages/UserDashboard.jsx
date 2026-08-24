@@ -3,9 +3,11 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import BlockEditor from '../components/BlockEditor';
+import TelegramNotificationSettings from '../components/TelegramNotificationSettings';
 import { stripHtml, getBlogUrl } from '../components/ContentBlockRenderer';
 import { API_BASE_URL } from '../config';
 import { 
+  Send,
   PenTool, 
   BookOpen, 
   FileCheck, 
@@ -358,10 +360,10 @@ export default function UserDashboard() {
 
   return (
     <div className="flex-1 w-full h-full flex flex-col md:flex-row bg-slate-50 relative overflow-hidden">
-      {/* PINNED SIDEBAR (STARTS DIRECTLY UNDER NAVBAR WITH ZERO GAP) */}
+      {/* PINNED SIDEBAR (DESKTOP) */}
       <aside
-        className={`bg-white border-r border-slate-200/90 flex flex-col shrink-0 h-full overflow-y-auto transition-all duration-300 ease-in-out ${
-          isCollapsed ? 'w-full md:w-20' : 'w-full md:w-64 lg:w-72'
+        className={`hidden md:flex md:flex-col bg-white border-r border-slate-200/90 shrink-0 h-full overflow-y-auto transition-all duration-300 ease-in-out ${
+          isCollapsed ? 'md:w-20' : 'md:w-64 lg:w-72'
         }`}
       >
         {/* Sidebar Header with Collapse/Expand Toggle */}
@@ -514,6 +516,26 @@ export default function UserDashboard() {
           </button>
 
           <button
+            onClick={() => setActiveTab('telegram')}
+            title="Telegram Story Alerts"
+            className={`w-full flex items-center ${isCollapsed ? 'justify-center p-3' : 'justify-between px-3.5 py-2.5'} rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'telegram'
+                ? 'bg-sky-50 text-sky-700 shadow-xs border border-sky-200/80'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <Send className={`w-4 h-4 shrink-0 ${activeTab === 'telegram' ? 'text-sky-600' : 'text-sky-500'}`} />
+              {!isCollapsed && <span>Telegram Alerts</span>}
+            </div>
+            {!isCollapsed && (
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-sky-100 text-sky-800">
+                Bot
+              </span>
+            )}
+          </button>
+
+          <button
             onClick={() => setActiveTab('profile')}
             title="Profile & Bio"
             className={`w-full flex items-center ${isCollapsed ? 'justify-center p-3' : 'justify-between px-3.5 py-2.5'} rounded-xl text-xs font-bold transition-all cursor-pointer ${
@@ -568,8 +590,92 @@ export default function UserDashboard() {
         </div>
       </aside>
 
+      {/* MOBILE HORIZONTAL NAVIGATION STRIP (< md) */}
+      <div className="md:hidden bg-white border-b border-slate-200/90 px-3 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar scrollbar-none shrink-0 shadow-2xs z-10 select-none">
+        <button
+          type="button"
+          onClick={() => setActiveTab('submit')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
+            activeTab === 'submit'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+          }`}
+        >
+          <PenTool className="w-3.5 h-3.5" />
+          <span>Studio</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('my-blogs')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
+            activeTab === 'my-blogs'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+          }`}
+        >
+          <BookOpen className="w-3.5 h-3.5" />
+          <span>Publications ({myBlogs.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('my-requests')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
+            activeTab === 'my-requests'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+          }`}
+        >
+          <FileCheck className="w-3.5 h-3.5" />
+          <span>Requests ({myRequests.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('saved');
+            fetchSavedBlogs();
+          }}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
+            activeTab === 'saved'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+          }`}
+        >
+          <Bookmark className="w-3.5 h-3.5" />
+          <span>Saved ({savedBlogs.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('telegram')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
+            activeTab === 'telegram'
+              ? 'bg-sky-600 text-white shadow-xs'
+              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+          }`}
+        >
+          <Send className="w-3.5 h-3.5" />
+          <span>Telegram Alerts</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('profile')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
+            activeTab === 'profile'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+          }`}
+        >
+          <Edit3 className="w-3.5 h-3.5" />
+          <span>Profile</span>
+        </button>
+      </div>
+
       {/* MAIN CONTENT AREA (INDEPENDENTLY SCROLLS SMOOTHLY) */}
-      <main className="flex-1 min-w-0 h-full p-4 sm:p-5 lg:p-6 overflow-y-auto">
+      <main className="flex-1 min-w-0 h-full p-3.5 sm:p-5 lg:p-6 overflow-y-auto">
         {/* Admin Access Denied Banner */}
         {searchParams.get('adminDenied') && (
           <div className="mb-4 p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between gap-3 text-rose-900 shadow-xs animate-in fade-in-50">
@@ -605,6 +711,7 @@ export default function UserDashboard() {
               {activeTab === 'my-blogs' && 'My Blog Publications'}
               {activeTab === 'my-requests' && 'Submission History & Approvals'}
               {activeTab === 'saved' && 'Saved Articles & Bookmarks'}
+              {activeTab === 'telegram' && 'Telegram Story Alerts & Channel Preferences'}
               {activeTab === 'profile' && 'Creator Profile & Bio Settings'}
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -612,6 +719,7 @@ export default function UserDashboard() {
               {activeTab === 'my-blogs' && 'Manage, edit, or delete multimedia articles you have written.'}
               {activeTab === 'my-requests' && 'Track the status and review notes from administrators.'}
               {activeTab === 'saved' && 'Quick access to reading list and favorite posts.'}
+              {activeTab === 'telegram' && 'Connect your Telegram account to receive instant news alerts by category.'}
               {activeTab === 'profile' && 'Customize your public author page, bio, and social links.'}
             </p>
           </div>
@@ -939,6 +1047,13 @@ export default function UserDashboard() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* TAB 4.5: Telegram Story Alerts & Bot Subscriptions */}
+        {activeTab === 'telegram' && (
+          <div className="max-w-4xl">
+            <TelegramNotificationSettings />
           </div>
         )}
 

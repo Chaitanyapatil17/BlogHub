@@ -165,6 +165,17 @@ export default function Footer() {
                 Blog<span className="text-red-500">Hub</span>
               </span>
               <span className="text-xs text-slate-400 hidden sm:inline">• Multimedia Publishing Platform</span>
+
+              <a
+                href="https://t.me/BlogHubNewsBot"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 text-[11px] font-bold transition-colors ml-2"
+                title="Get Instant Telegram Alerts"
+              >
+                <Send className="w-3 h-3" />
+                <span>@BlogHubNewsBot</span>
+              </a>
             </div>
 
             <button
